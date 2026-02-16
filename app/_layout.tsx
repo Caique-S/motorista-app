@@ -1,24 +1,55 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+// app/_layout.tsx
+import { Stack , useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity } from 'react-native';
+import { ConfigProvider } from '../context/ConfigContext';
+import { MotoristasProvider } from '../context/MotoristasContext';
+import { useBackgroundLocation } from '../hooks/useBackgroundLocation';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+function BackgroundInitializer() {
+  useBackgroundLocation();
+  return null;
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const router = useRouter();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ConfigProvider>
+      <MotoristasProvider>
+        <BackgroundInitializer />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: '#2A4BA0' }, // azul
+            headerTintColor: '#fff',
+            headerTitleStyle: { fontWeight: 'bold' },
+          }}
+        >
+          <Stack.Screen
+            name="index" // tela Chegada
+            options={{
+              title: 'Chegada',
+              headerRight: () => (
+                <TouchableOpacity onPress={() => router.push('/config')}>
+                  <Ionicons name="settings-outline" size={24} color="white" />
+                </TouchableOpacity>
+              ),
+            }}
+          />
+          <Stack.Screen
+            name="fila"
+            options={{
+              title: 'Fila de Descarga',
+            }}
+          />
+          <Stack.Screen
+            name="config"
+            options={{
+              title: 'Configurações',
+            }}
+          />
+        </Stack>
+      </MotoristasProvider>
+    </ConfigProvider>
   );
 }
