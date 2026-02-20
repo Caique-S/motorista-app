@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
-import { useConfig } from '../context/ConfigContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { enviarLocalizacao } from '../services/api';
+import { useConfig } from '../context/ConfigContext';
 
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
-// Define a tarefa de localização em segundo plano
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.error('Erro na tarefa de background:', error);
@@ -20,17 +18,21 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 
     try {
       const motoristaNome = await AsyncStorage.getItem('@motoristaNome');
-      const apiUrl = await AsyncStorage.getItem('@apiUrl'); // Pega a URL atualizada
+      const apiUrl = await AsyncStorage.getItem('@apiUrl');
       if (!apiUrl || !motoristaNome) return;
 
-      await enviarLocalizacao(apiUrl, {
-        motorista: motoristaNome,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        timestamp: location.timestamp,
+      await fetch(`${apiUrl}/api/melicages/localizacoes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          motorista: motoristaNome,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          timestamp: location.timestamp,
+        }),
       });
     } catch (err) {
-      console.error('Falha ao enviar localização:', err);
+      console.error('Falha ao enviar localização em background:', err);
     }
   }
 });
@@ -39,35 +41,42 @@ export const useBackgroundLocation = () => {
   const { apiUrl, intervaloEnvio } = useConfig();
 
   useEffect(() => {
-    if (!apiUrl) return; // Só inicia se a URL estiver configurada
+    if (!apiUrl) return;
+
+    let isActive = true;
 
     const startBackground = async () => {
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permissão de background negada');
-        return;
-      }
+      try {
+        const { status } = await Location.requestBackgroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permissão de background negada');
+          return;
+        }
 
-      // Verifica se a tarefa já está registrada
-      const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
-      if (!isRegistered) {
-        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-          accuracy: Location.Accuracy.High,
-          timeInterval: intervaloEnvio,
-          distanceInterval: 10,
-          foregroundService: {
-            notificationTitle: 'Localização em segundo plano',
-            notificationBody: 'Enviando posição para a central',
-          },
-        });
+        const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
+        if (!isRegistered) {
+          await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+            accuracy: Location.Accuracy.High,
+            timeInterval: intervaloEnvio,
+            distanceInterval: 10,
+            foregroundService: {
+              notificationTitle: 'Localização em segundo plano',
+              notificationBody: 'Enviando posição para a central',
+            },
+          });
+          console.log('✅ Rastreamento em background iniciado');
+        }
+      } catch (err) {
+        console.error('Erro ao iniciar background location:', err);
       }
     };
 
     startBackground();
 
     return () => {
-      // Para a tarefa se o componente desmontar (opcional)
-      // Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      if (isActive) {
+        // Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      }
     };
   }, [apiUrl, intervaloEnvio]);
 };

@@ -1,5 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useConfig } from './ConfigContext';
 
 export interface Motorista {
@@ -19,6 +18,7 @@ interface MotoristasContextData {
   motoristas: Motorista[];
   loading: boolean;
   error: string | null;
+  clearError: () => void;
   adicionarMotorista: (nome: string) => Promise<void>;
   iniciarDescarga: (id: string) => Promise<void>;
   finalizarDescarga: (id: string) => Promise<void>;
@@ -33,18 +33,21 @@ export const MotoristasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const clearError = () => setError(null);
+
   const fetchMotoristas = useCallback(async () => {
     if (!apiUrl) {
       setMotoristas([]);
       return;
     }
+
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/motoristas`);
-      if (!response.ok) throw new Error('Erro ao buscar motoristas');
-      const data = await response.json();
-      // Converte _id para id
-      const motoristasMapeados = data.map((item: any) => ({
+      const response = await fetch(`${apiUrl}/api/melicages/motoristas`);
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+      const json = await response.json();
+      if (!json.success) throw new Error(json.erro || 'Erro desconhecido');
+      const motoristasMapeados = json.data.map((item: any) => ({
         ...item,
         id: item._id,
       }));
@@ -59,41 +62,38 @@ export const MotoristasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [apiUrl]);
 
   useEffect(() => {
-    if (error) Alert.alert('Erro', error);
-  }, [error]);
-
-  // Evita recriação do intervalo a cada render
-  const fetchRef = useRef(fetchMotoristas);
-  useEffect(() => {
-    fetchRef.current = fetchMotoristas;
+    fetchMotoristas();
   }, [fetchMotoristas]);
 
   useEffect(() => {
     if (!apiUrl) return;
-    const interval = setInterval(() => fetchRef.current(), intervaloEnvio);
-    return () => clearInterval(interval);
-  }, [apiUrl, intervaloEnvio]);
-
-  useEffect(() => {
-    fetchMotoristas();
-  }, [fetchMotoristas]);
+    const intervalId = setInterval(() => {
+      fetchMotoristas();
+    }, intervaloEnvio);
+    return () => clearInterval(intervalId);
+  }, [apiUrl, intervaloEnvio, fetchMotoristas]);
 
   const adicionarMotorista = async (nome: string) => {
-    if (!apiUrl) throw new Error('API não configurada');
+    if (!apiUrl) {
+      setError('API não configurada');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/motoristas/chegada`, {
+      const response = await fetch(`${apiUrl}/api/melicages/motoristas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome }),
       });
       if (!response.ok) throw new Error('Erro ao registrar chegada');
-      const novoMotorista = await response.json();
-      // Converte _id para id
+      const json = await response.json();
+      if (!json.success) throw new Error(json.erro || 'Erro desconhecido');
+      const novoMotorista = json.data;
       const motoristaComId = { ...novoMotorista, id: novoMotorista._id };
       setMotoristas(prev => [...prev, motoristaComId].sort(
         (a, b) => new Date(a.timestampChegada).getTime() - new Date(b.timestampChegada).getTime()
       ));
+      setError(null);
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -103,14 +103,19 @@ export const MotoristasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const iniciarDescarga = async (id: string) => {
-    if (!apiUrl) throw new Error('API não configurada');
+    if (!apiUrl) {
+      setError('API não configurada');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/motoristas/${id}/iniciar-descarga`, {
+      const response = await fetch(`${apiUrl}/api/melicages/motoristas/${id}/iniciar-descarga`, {
         method: 'PUT',
       });
       if (!response.ok) throw new Error('Erro ao iniciar descarga');
-      const motoristaAtualizado = await response.json();
+      const json = await response.json();
+      if (!json.success) throw new Error(json.erro || 'Erro desconhecido');
+      const motoristaAtualizado = json.data;
       const motoristaComId = { ...motoristaAtualizado, id: motoristaAtualizado._id };
       setMotoristas(prev => prev.map(m => m.id === id ? motoristaComId : m));
     } catch (err: any) {
@@ -122,14 +127,19 @@ export const MotoristasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const finalizarDescarga = async (id: string) => {
-    if (!apiUrl) throw new Error('API não configurada');
+    if (!apiUrl) {
+      setError('API não configurada');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/motoristas/${id}/finalizar-descarga`, {
+      const response = await fetch(`${apiUrl}/api/melicages/motoristas/${id}/finalizar-descarga`, {
         method: 'PUT',
       });
       if (!response.ok) throw new Error('Erro ao finalizar descarga');
-      const motoristaAtualizado = await response.json();
+      const json = await response.json();
+      if (!json.success) throw new Error(json.erro || 'Erro desconhecido');
+      const motoristaAtualizado = json.data;
       const motoristaComId = { ...motoristaAtualizado, id: motoristaAtualizado._id };
       setMotoristas(prev => prev.map(m => m.id === id ? motoristaComId : m));
     } catch (err: any) {
@@ -146,11 +156,13 @@ export const MotoristasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         motoristas,
         loading,
         error,
+        clearError,
         adicionarMotorista,
         iniciarDescarga,
         finalizarDescarga,
         refreshMotoristas: fetchMotoristas,
-      }}>
+      }}
+    >
       {children}
     </MotoristasContext.Provider>
   );
