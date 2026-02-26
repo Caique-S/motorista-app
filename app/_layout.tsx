@@ -1,5 +1,4 @@
-// app/_layout.tsx
-import { Stack , useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
 import { ConfigProvider } from '../context/ConfigContext';
@@ -20,13 +19,13 @@ export default function RootLayout() {
         <BackgroundInitializer />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: '#2A4BA0' }, // azul
+            headerStyle: { backgroundColor: '#2A4BA0' },
             headerTintColor: '#fff',
             headerTitleStyle: { fontWeight: 'bold' },
           }}
         >
           <Stack.Screen
-            name="index" // tela Chegada
+            name="index"
             options={{
               title: 'Chegada',
               headerRight: () => (
@@ -36,18 +35,8 @@ export default function RootLayout() {
               ),
             }}
           />
-          <Stack.Screen
-            name="fila"
-            options={{
-              title: 'Fila de Descarga',
-            }}
-          />
-          <Stack.Screen
-            name="config"
-            options={{
-              title: 'Configurações',
-            }}
-          />
+          <Stack.Screen name="fila" options={{ title: 'Fila de Descarga' }} />
+          <Stack.Screen name="config" options={{ title: 'Configurações' }} />
         </Stack>
       </MotoristasProvider>
     </ConfigProvider>

@@ -3,6 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useConfig } from '../context/ConfigContext';
+import { useMotoristas } from '../context/MotoristasContext';
 
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
@@ -11,39 +12,42 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     console.error('Erro na tarefa de background:', error);
     return;
   }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    const location = locations[0];
-    if (!location) return;
+  try {
+    if (data) {
+      const { locations } = data as { locations: Location.LocationObject[] };
+      const location = locations[0];
+      if (!location) return;
 
-    try {
-      const motoristaNome = await AsyncStorage.getItem('@motoristaNome');
+      const chave = await AsyncStorage.getItem('@chaveMotorista');
       const apiUrl = await AsyncStorage.getItem('@apiUrl');
-      if (!apiUrl || !motoristaNome) return;
+      if (!apiUrl || !chave) return;
 
       await fetch(`${apiUrl}/api/melicages/localizacoes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          motorista: motoristaNome,
+          motorista: chave,
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           timestamp: location.timestamp,
         }),
       });
-    } catch (err) {
-      console.error('Falha ao enviar localização em background:', err);
+      console.log('Localização enviada em background');
     }
+  } catch (err) {
+    console.error('Falha ao enviar localização em background:', err);
   }
 });
 
 export const useBackgroundLocation = () => {
-  const { apiUrl, intervaloEnvio } = useConfig();
+  const { apiUrl, intervaloEnvio, monitoramento, trackingList } = useConfig();
+  const { motoristaAtivo } = useMotoristas();
 
   useEffect(() => {
-    if (!apiUrl) return;
+    if (!apiUrl || !monitoramento || !motoristaAtivo) return;
 
-    let isActive = true;
+    const deveRastrear = trackingList.includes(motoristaAtivo.chave_identificacao);
+    if (!deveRastrear) return;
 
     const startBackground = async () => {
       try {
@@ -74,9 +78,7 @@ export const useBackgroundLocation = () => {
     startBackground();
 
     return () => {
-      if (isActive) {
-        // Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-      }
+      // Opcional: parar a tarefa ao desmontar se desejar
     };
-  }, [apiUrl, intervaloEnvio]);
+  }, [apiUrl, intervaloEnvio, monitoramento, trackingList, motoristaAtivo]);
 };

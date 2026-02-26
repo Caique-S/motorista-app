@@ -1,9 +1,6 @@
-/**
- * Função genérica para enviar localização para a API.
- * Agora com try/catch e retorno de boolean indicando sucesso.
- */
 export const enviarLocalizacao = async (apiUrl: string, data: any): Promise<boolean> => {
   try {
+    console.log('Enviando localização para:', apiUrl, data);
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -2,23 +2,14 @@ import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface ErrorModalProps {
-  visible: boolean;          // controla se o modal está aberto
-  message: string;           // mensagem de erro a ser exibida
-  onClose: () => void;       // função chamada ao fechar o modal
+  visible: boolean;
+  message: string;
+  onClose: () => void;
 }
 
-/**
- * Componente de modal reutilizável para exibir erros de forma amigável.
- * Substitui os antigos Alert.console ou logs, dando um feedback visual moderno.
- */
 const ErrorModal: React.FC<ErrorModalProps> = ({ visible, message, onClose }) => {
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modalView}>
           <Text style={styles.title}>❌ Erro</Text>
@@ -51,30 +42,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#d32f2f',
-  },
-  message: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#333',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 5,
-    padding: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#d32f2f' },
+  message: { fontSize: 16, textAlign: 'center', marginBottom: 20, color: '#333' },
+  button: { backgroundColor: '#007AFF', borderRadius: 5, padding: 10, width: '100%', alignItems: 'center' },
+  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });
 
 export default ErrorModal;
